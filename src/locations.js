@@ -4,9 +4,10 @@ function PointNG(config) {
     this.level = config.level
     this.api_key = config.api_key
     this.widgetPosition = config.widgetPosition
+    this.privacyPolicyLink = config.privacyPolicyLink
 }
 
-PointNG.prototype = (function(){
+PointNG.prototype = (function(document){
     
     var baseurl = "https://cdn.pointng.io/networks/"
 
@@ -40,6 +41,7 @@ PointNG.prototype = (function(){
    var currentLevel;
    var currentKey;
    var currentWidgetPosition;
+   var privacyPolicyLink;
    function getLocation(level) {
        if(level) {
         currentLevel=level
@@ -99,15 +101,28 @@ async function loadDynamicScript (lat, lon, id, url, resolve, reject, callback, 
     if (level) {
         currentLevel = level
     }
-    const script = document.createElement('script');
-    script.src = url;
-    // script.async = false
-    script.id = id;
-    document.body.appendChild(script);
-    
-    script.onload = async function () {
-        if (callback) await callback(lat, lon, resolve, reject, loadDynamicScript);
-    };
+    el = document.getElementById(id);
+    if (!el) {     
+        const script = document.createElement('script');
+        script.src = url;
+        script.id = id;
+        document.body.appendChild(script);
+       
+        script.onload = async function () {
+            if (callback) await callback(lat, lon, resolve, reject, loadDynamicScript);
+        };
+    } else {
+        el.remove(); 
+        const script = document.createElement('script');
+        script.src = url;
+        script.id = id;
+        document.body.appendChild(script);
+        
+        script.onload = async function () {
+            if (callback) await callback(lat, lon, resolve, reject, loadDynamicScript);
+        };
+    }
+
 
 };
 function getSubRegion(lat, lon, resolve, reject, cb) {
@@ -122,6 +137,8 @@ function getSubRegion(lat, lon, resolve, reject, cb) {
     predictionData.sub_region = result.split('&')[1].replace(/_/g," ");
     console.log(currentLevel)
     if (currentLevel == 'continent' || !currentLevel || currentLevel == null || currentLevel == undefined || currentLevel == false || currentLevel == '') {
+        document.getElementById("pointng-loader").style.opacity = 0;
+        document.getElementById("pointng-loader").style['z-index'] = -1;
         predictionData.ready = true
         resolve(predictionData)
     } else if (currentLevel == 'country' || currentLevel == 'state' || currentLevel == 'city') {
@@ -135,7 +152,7 @@ function getSubRegion(lat, lon, resolve, reject, cb) {
 }
 
 function getCountry(lat, lon, resolve, reject, cb) {
- 
+    
     if (!netJson) {
         reject(new Error("Unable to return location information. Make sure you provided a valid API key."))
     } else {
@@ -154,6 +171,8 @@ function getCountry(lat, lon, resolve, reject, cb) {
 
         if (currentLevel == 'country') {
             predictionData.ready = true
+            document.getElementById("pointng-loader").style.opacity = 0;
+            document.getElementById("pointng-loader").style['z-index'] = -1;
             resolve(predictionData)
         } else if (currentLevel == 'state' || currentLevel == 'city') {
             cb(lat, lon, id,baseurl + 'state/' + decodeURIComponent(predictionData.iso2).replace(/ /g,"_").toLowerCase() + '_state.js?api_key=' + currentKey, resolve, reject, getState)
@@ -176,6 +195,8 @@ function getState(lat, lon,resolve, reject, cb) {
     predictionData.state = result.split('&')[0].replace(/_/g," ")
     if (currentLevel == 'state') {
         predictionData.ready = true
+        document.getElementById("pointng-loader").style.opacity = 0;
+        document.getElementById("pointng-loader").style['z-index'] = -1;
         resolve(predictionData)
     } else {
         cb(lat, lon, id,baseurl + 'city/' + predictionData.iso2.toLowerCase() + '_' + decodeURIComponent(predictionData.state).replace(/ /g,"_").toLowerCase() + '_city.js?api_key=' + currentKey,resolve, reject, getCity)
@@ -196,6 +217,8 @@ function getCity(lat, lon, resolve, reject) {
         reject(new Error("Unable to return location information"))
     } else {
         predictionData.ready = true
+        document.getElementById("pointng-loader").style.opacity = 0;
+        document.getElementById("pointng-loader").style['z-index'] = -1;
         resolve(predictionData)
     }
     
@@ -329,19 +352,117 @@ function openWidget(fn) {
 }
 
 function start() {
-
+    console.log(this.config.widgetPosition)
     if (this.config.widgetPosition == 'left') {
         currentWidgetPosition = 'left'
     } else {
         currentWidgetPosition = 'right'
     }
-    appendToWidget("head", "style", "", `.pointng-open-button{color:#fff;border-radius: 5px;box-shadow: 0 2px 6px 0 rgba(0,0,0,.4);margin: 20px;border:none;cursor:pointer;position:fixed;bottom:5px;${currentWidgetPosition}:5px;width:35px}.pointng-popup{display:none;position:fixed;bottom:70;${currentWidgetPosition}:15px;border:2px solid #f1f1f1;z-index:9;border-radius: 5px;font-family: system-ui;}.pointng-form-container{max-width:300px;padding-left:20px;padding-right:20px;padding-bottom:10px;padding-top:1px;background-color:#fff}.pointng-form-container textarea{width:100%;padding:15px;margin:5px 0 22px 0;border:none;background:#f1f1f1;resize:none;min-height:200px}.pointng-form-container textarea:focus{background-color:#ddd;outline:0}.pointng-form-container .btn{background-color:31b0d4;border-radius:5px;font-size:1.1em;color:#fff;padding:16px 20px;border:none;cursor:pointer;width:100%;margin-bottom:10px;opacity:.8}.pointng-form-container .cancel{background-color:red}.form-container .btn:hover,.pointng-open-button:hover{opacity:1}`);
+    privacyPolicyLink = this.config.privacyPolicyLink
+    appendToWidget("head", "style", "", `.pointng-open-button{color:#fff;border-radius: 5px;box-shadow: 0 2px 6px 0 rgba(0,0,0,.4);margin: 20px;border:none;cursor:pointer;position:fixed;bottom:5px;${currentWidgetPosition}:5px;width:35px}
+    .pointng-header{
+        padding: 0px;
+        display: block;
+        font-size: 1.17em;
+        margin-block-start: 1em;
+        margin-block-end: 1em;
+        margin-inline-start: 0px;
+        margin-inline-end: 0px;
+        font-weight: bold;
+    }
+        .pointng-popup{
+            display:none;
+            position:fixed;
+            bottom:0;
+            margin-bottom: 70px;
+            margin-right: 10px;
+            ${currentWidgetPosition}:15px;
+            border:2px solid #f1f1f1;
+            z-index:9;
+            border-radius: 5px;
+            font-family: system-ui;
+        }
+        .pointng-form-container{max-width:300px;padding-left:20px;padding-right:20px;padding-bottom:20px;padding-top:20px;background-color:#fff}.pointng-form-container textarea{width:100%;padding:15px;margin:5px 0 22px 0;border:none;background:#f1f1f1;resize:none;min-height:200px}.pointng-form-container textarea:focus{background-color:#ddd;outline:0}
+        .pointng-form-container .btn{
+            background-color:#31b0d4 !important;border-radius:5px;font-size:1.1em;color:#fff;padding:16px 20px;border:none;cursor:pointer;width:100%;margin-bottom:10px;opacity:.8}.pointng-form-container .cancel{background-color:red}.form-container .btn:hover,.pointng-open-button:hover{opacity:1}.pointng-link {text-decoration: none;}
+            
+            .pointng-loader-wrapper {
+                position: fixed;
+                bottom: 0;
+                ${currentWidgetPosition}: 0;
+                padding: 10px;
+                background: #fff;
+                margin-bottom: 25px;
+                margin-${currentWidgetPosition}: 25px;
+                opacity: 1;
+                z-index: 1;
+                transition: opacity .3s;
+                display: flex;
+                align-items: center;
+                border-radius: 6px;
+                height: 15px;
+                width: 15px;
+              } 
+
+              .ring-container {
+                position: fixed;
+                bottom: 0;
+                ${currentWidgetPosition}: 0;
+                padding: 10px;
+                background: #fff;
+                margin-bottom: 25px;
+                margin-${currentWidgetPosition}: 25px;
+                opacity: 0;
+                z-index: -1;
+                transition: opacity .3s;
+                display: flex;
+                align-items: center;
+                border-radius: 6px;
+                height: 35px;
+                width: 35px;
+            }
+            
+            .circle {
+                width: 15px;
+                height: 15px;
+                background-color: #dddde8;
+                border-radius: 50%;
+                position: fixed;
+                ${currentWidgetPosition}: 0;
+                bottom: 0;
+                margin-${currentWidgetPosition}: 35px;
+                margin-bottom: 35px;
+            }
+            
+            .ringring {
+                border: 3px solid #dddde8;
+                -webkit-border-radius: 30px;
+                height: 25px;
+                width: 25px;
+                position: fixed;
+                ${currentWidgetPosition}: 0;
+                bottom: 0;
+                margin-${currentWidgetPosition}: 30px;
+                margin-bottom: 30px;
+                -webkit-animation: pulsate 1s ease-out;
+                -webkit-animation-iteration-count: infinite;
+                opacity: 0.0;
+            }
+            @-webkit-keyframes pulsate {
+                0% {-webkit-transform: scale(0.1, 0.1); opacity: 0.0;}
+                50% {opacity: 1.0;}
+                100% {-webkit-transform: scale(1.2, 1.2); opacity: 0.0;}
+            }
+            
+            `);
+
+    document.body.innerHTML += '<div class="pointng-widget"></div>';
+    document.body.innerHTML += '<div id="pointng-loader" class="ring-container"><div class="ringring"></div><div class="circle"></div></div>'
     var widgets = document.querySelectorAll('.pointng-widget');
     for (var i = 0; i < widgets.length; i++) {
         var parentNode = widgets[i];
         parentNode.setAttribute("id", "pointng-widget" + i);
-        appendToWidget("#pointng-widget" + i, "div", "", '<img class="pointng-open-button" src="https://cdn.pointng.io/pointng_widget.svg" alt="pointng" onclick="pointng.openForm()"><div class="pointng-popup" id="pointngForm"><div class="pointng-form-container"> <h3>pointNG location identification management</h3><p>Choose the level you allow to identify your location.</p><input type="radio" id="continent" name="levels" value="continent" checked> <label for="continent">Continent</label><br><input type="radio" id="country" name="levels" value="country"> <label for="country">Country</label><br><input type="radio" id="state" name="levels" value="state"><label for="state">State</label><br><input type="radio" id="city" name="levels" value="city"><label for="city">City</label><br><div id="warning"></div><br><button type="submit" id="locateMe" class="btn" onclick="pointng.userLocate()">Locate me</button><button type="submit" id="locateMe" class="btn" onclick="pointng.savePreferences()">Save my preferences</button></div></div>')
-
+        appendToWidget("#pointng-widget" + i, "div", "", `<img class="pointng-open-button" src="https://cdn.pointng.io/pointng_widget.svg" alt="pointng" onclick="pointng.openForm()"><div class="pointng-popup" id="pointngForm"><form onsubmit="return false;" style="margin-bottom: 0px;"><div class="pointng-form-container"> <span class="pointng-header">pointNG location management</span><p>Choose the level that you allow this website to use your location.</p><input type="radio" id="pointng-continent" name="levels" value="continent" checked> <label for="continent">Continent</label><br><input type="radio" id="pointng-country" name="levels" value="country"> <label for="country">Country</label><br><input type="radio" id="pointng-state" name="levels" value="state"><label for="state"> State</label><br><input type="radio" id="pointng-city" name="levels" value="city"><label for="city"> City</label><br><div id="warning"></div><br><button type="submit" id="locateMe" class="btn" onclick="pointng.userLocate()">Locate me</button><button type="submit" id="locateMe" class="btn" onclick="pointng.savePreferences()">Save my preferences</button><br><a class="pointng-link" href="${privacyPolicyLink}">Read how this site uses your location &raquo;</a></div></form></div>`)
     }
 }
 
@@ -355,10 +476,12 @@ function openForm() {
 
 function userLocate() {
     document.getElementById("pointngForm").style.display = "none";
+    document.getElementById("pointng-loader").style.opacity = 1;
+    document.getElementById("pointng-loader").style['z-index'] = 1;
     predictionData.ready = false
     var radios = document.getElementsByName('levels');
 
-    if (document.getElementById('continent').checked || document.getElementById('country').checked || document.getElementById('state').checked || document.getElementById('city').checked) {
+    if (document.getElementById('pointng-continent').checked || document.getElementById('pointng-country').checked || document.getElementById('pointng-state').checked || document.getElementById('pointng-city').checked) {
         for (var i = 0, length = radios.length; i < length; i++) {
             if (radios[i].checked) {
                 console.log(radios[i].value)
@@ -383,7 +506,7 @@ function savePreferences() {
     predictionData.ready = false
     var radios = document.getElementsByName('levels');
 
-    if (document.getElementById('continent').checked || document.getElementById('country').checked || document.getElementById('state').checked || document.getElementById('city').checked) {
+    if (document.getElementById('pointng-continent').checked || document.getElementById('pointng-country').checked || document.getElementById('pointng-state').checked || document.getElementById('pointng-city').checked) {
         for (var i = 0, length = radios.length; i < length; i++) {
             if (radios[i].checked) {
                 console.log(radios[i].value)
@@ -416,5 +539,5 @@ return {
 };
 
 
-})();
+})(document);
 
